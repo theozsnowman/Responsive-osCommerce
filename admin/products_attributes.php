@@ -26,9 +26,11 @@
       case 'add_product_options':
         $products_options_id = tep_db_prepare_input($HTTP_POST_VARS['products_options_id']);
         $option_name_array = $HTTP_POST_VARS['option_name'];
+        $option_sort_array = $HTTP_POST_VARS['option_sort'];
 
         for ($i=0, $n=sizeof($languages); $i<$n; $i ++) {
           $option_name = tep_db_prepare_input($option_name_array[$languages[$i]['id']]);
+          $option_sort = tep_db_prepare_input($option_sort_array[$languages[$i]['id']]);
 
           tep_db_query("insert into " . TABLE_PRODUCTS_OPTIONS . " (products_options_id, products_options_name, language_id) values ('" . (int)$products_options_id . "', '" . tep_db_input($option_name) . "', '" . (int)$languages[$i]['id'] . "')");
         }
@@ -55,6 +57,8 @@
         $values_id = tep_db_prepare_input($HTTP_POST_VARS['values_id']);
         $value_price = tep_db_prepare_input($HTTP_POST_VARS['value_price']);
         $price_prefix = tep_db_prepare_input($HTTP_POST_VARS['price_prefix']);
+        
+        $sort_order = tep_db_prepare_input($HTTP_POST_VARS['sort_order']);
 
         tep_db_query("insert into " . TABLE_PRODUCTS_ATTRIBUTES . " values (null, '" . (int)$products_id . "', '" . (int)$options_id . "', '" . (int)$values_id . "', '" . (float)tep_db_input($value_price) . "', '" . tep_db_input($price_prefix) . "')");
 
@@ -74,12 +78,16 @@
         break;
       case 'update_option_name':
         $option_name_array = $HTTP_POST_VARS['option_name'];
+        $option_sort_array = $HTTP_POST_VARS['option_sort'];
+
         $option_id = tep_db_prepare_input($HTTP_POST_VARS['option_id']);
 
         for ($i=0, $n=sizeof($languages); $i<$n; $i ++) {
           $option_name = tep_db_prepare_input($option_name_array[$languages[$i]['id']]);
+          $option_sort = tep_db_prepare_input($option_sort_array[$languages[$i]['id']]);
 
           tep_db_query("update " . TABLE_PRODUCTS_OPTIONS . " set products_options_name = '" . tep_db_input($option_name) . "' where products_options_id = '" . (int)$option_id . "' and language_id = '" . (int)$languages[$i]['id'] . "'");
+          tep_db_query("update " . TABLE_PRODUCTS_OPTIONS . " set products_options_sort_order = '" . tep_db_input($option_sort) . "' where products_options_id = '" . (int)$option_id . "' and language_id = '" . (int)$languages[$i]['id'] . "'");
         }
 
         tep_redirect(tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info));
@@ -106,8 +114,9 @@
         $value_price = tep_db_prepare_input($HTTP_POST_VARS['value_price']);
         $price_prefix = tep_db_prepare_input($HTTP_POST_VARS['price_prefix']);
         $attribute_id = tep_db_prepare_input($HTTP_POST_VARS['attribute_id']);
+        $sort_order = tep_db_prepare_input($HTTP_POST_VARS['sort_order']);
 
-        tep_db_query("update " . TABLE_PRODUCTS_ATTRIBUTES . " set products_id = '" . (int)$products_id . "', options_id = '" . (int)$options_id . "', options_values_id = '" . (int)$values_id . "', options_values_price = '" . (float)tep_db_input($value_price) . "', price_prefix = '" . tep_db_input($price_prefix) . "' where products_attributes_id = '" . (int)$attribute_id . "'");
+        tep_db_query("update " . TABLE_PRODUCTS_ATTRIBUTES . " set products_id = '" . (int)$products_id . "', options_id = '" . (int)$options_id . "', options_values_id = '" . (int)$values_id . "', options_values_price = '" . (float)tep_db_input($value_price) . "', price_prefix = '" . tep_db_input($price_prefix) . "', sort_order = '" . tep_db_input($sort_order) . "' where products_attributes_id = '" . (int)$attribute_id . "'");
 
         if (DOWNLOAD_ENABLED == 'true') {
           $products_attributes_filename = tep_db_prepare_input($HTTP_POST_VARS['products_attributes_filename']);
@@ -224,10 +233,10 @@
   } else {
 ?>
               <tr>
-                <td colspan="3" class="pageHeading">&nbsp;<?php echo HEADING_TITLE_OPT; ?>&nbsp;</td>
+                <td colspan="4" class="pageHeading">&nbsp;<?php echo HEADING_TITLE_OPT; ?>&nbsp;</td>
               </tr>
               <tr>
-                <td colspan="3" class="smallText" align="right">
+                <td colspan="4" class="smallText" align="right">
 <?php
     $options = "select * from " . TABLE_PRODUCTS_OPTIONS . " where language_id = '" . (int)$languages_id . "' order by products_options_id";
     $options_split = new splitPageResults($option_page, MAX_ROW_LISTS_OPTIONS, $options, $options_query_numrows);
@@ -237,15 +246,16 @@
                 </td>
               </tr>
               <tr>
-                <td colspan="3"><?php echo tep_black_line(); ?></td>
+                <td colspan="4"><?php echo tep_black_line(); ?></td>
               </tr>
               <tr class="dataTableHeadingRow">
                 <td class="dataTableHeadingContent">&nbsp;<?php echo TABLE_HEADING_ID; ?>&nbsp;</td>
                 <td class="dataTableHeadingContent">&nbsp;<?php echo TABLE_HEADING_OPT_NAME; ?>&nbsp;</td>
+                <td class="dataTableHeadingContent" align="center">&nbsp;<?php echo TABLE_HEADING_OPT_SORT_ORDER; ?>&nbsp;</td>
                 <td class="dataTableHeadingContent" align="center">&nbsp;<?php echo TABLE_HEADING_ACTION; ?>&nbsp;</td>
               </tr>
               <tr>
-                <td colspan="3"><?php echo tep_black_line(); ?></td>
+                <td colspan="4"><?php echo tep_black_line(); ?></td>
               </tr>
 <?php
     $next_id = 1;
@@ -259,14 +269,17 @@
       if (($action == 'update_option') && ($HTTP_GET_VARS['option_id'] == $options_values['products_options_id'])) {
         echo '<form name="option" action="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=update_option_name&' . $page_info) . '" method="post">';
         $inputs = '';
+        $sort_order = '';
         for ($i = 0, $n = sizeof($languages); $i < $n; $i ++) {
-          $option_name = tep_db_query("select products_options_name from " . TABLE_PRODUCTS_OPTIONS . " where products_options_id = '" . $options_values['products_options_id'] . "' and language_id = '" . $languages[$i]['id'] . "'");
+          $option_name = tep_db_query("select products_options_name, products_options_sort_order from " . TABLE_PRODUCTS_OPTIONS . " where products_options_id = '" . $options_values['products_options_id'] . "' and language_id = '" . $languages[$i]['id'] . "'");
           $option_name = tep_db_fetch_array($option_name);
           $inputs .= $languages[$i]['code'] . ':&nbsp;<input type="text" name="option_name[' . $languages[$i]['id'] . ']" size="20" value="' . $option_name['products_options_name'] . '">&nbsp;<br />';
+          $sort_order .= $languages[$i]['code'] . ':&nbsp;<input type="text" name="option_sort[' . $languages[$i]['id'] . ']" size="5" value="' . $option_name['products_options_sort_order'] . '">&nbsp;<br />';
         }
 ?>
                 <td align="center" class="smallText">&nbsp;<?php echo $options_values['products_options_id']; ?><input type="hidden" name="option_id" value="<?php echo $options_values['products_options_id']; ?>">&nbsp;</td>
                 <td class="smallText"><?php echo $inputs; ?></td>
+                <td class="smallText"><?php echo $sort_order; ?></td>
                 <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_SAVE, 'disk', null, 'primary') . tep_draw_button(IMAGE_CANCEL, 'close', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info)); ?>&nbsp;</td>
 <?php
         echo '</form>' . "\n";
@@ -274,6 +287,7 @@
 ?>
                 <td align="center" class="smallText">&nbsp;<?php echo $options_values["products_options_id"]; ?>&nbsp;</td>
                 <td class="smallText">&nbsp;<?php echo $options_values["products_options_name"]; ?>&nbsp;</td>
+                <td class="smallText" align="center">&nbsp;<?php echo $options_values["products_options_sort_order"]; ?>&nbsp;</td>
                 <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_EDIT, 'document', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=update_option&option_id=' . $options_values['products_options_id'] . '&' . $page_info)) . tep_draw_button(IMAGE_DELETE, 'trash', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_product_option&option_id=' . $options_values['products_options_id'] . '&' . $page_info)); ?>&nbsp;</td>
 <?php
       }
@@ -286,7 +300,7 @@
     }
 ?>
               <tr>
-                <td colspan="3"><?php echo tep_black_line(); ?></td>
+                <td colspan="4"><?php echo tep_black_line(); ?></td>
               </tr>
 <?php
     if ($action != 'update_option') {
@@ -295,19 +309,22 @@
 <?php
       echo '<form name="options" action="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=add_product_options&' . $page_info) . '" method="post"><input type="hidden" name="products_options_id" value="' . $next_id . '">';
       $inputs = '';
+      $sort_order = '';
       for ($i = 0, $n = sizeof($languages); $i < $n; $i ++) {
         $inputs .= $languages[$i]['code'] . ':&nbsp;<input type="text" name="option_name[' . $languages[$i]['id'] . ']" size="20">&nbsp;<br />';
+        $sort_order .= $languages[$i]['code'] . ':&nbsp;<input type="text" name="option_sort[' . $languages[$i]['id'] . ']" size="5">&nbsp;<br />';
       }
 ?>
                 <td align="center" class="smallText">&nbsp;<?php echo $next_id; ?>&nbsp;</td>
                 <td class="smallText"><?php echo $inputs; ?></td>
+                <td class="smallText"><?php echo $sort_order; ?></td>
                 <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_INSERT, 'plus'); ?>&nbsp;</td>
 <?php
       echo '</form>';
 ?>
               </tr>
               <tr>
-                <td colspan="3"><?php echo tep_black_line(); ?></td>
+                <td colspan="4"><?php echo tep_black_line(); ?></td>
               </tr>
 <?php
     }
@@ -531,7 +548,7 @@
         </table>
         <form name="attributes" action="<?php echo tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=' . $form_action . '&' . $page_info); ?>" method="post"><table border="0" width="100%" cellspacing="0" cellpadding="2">
           <tr>
-            <td colspan="7"><?php echo tep_black_line(); ?></td>
+            <td colspan="8"><?php echo tep_black_line(); ?></td>
           </tr>
           <tr class="dataTableHeadingRow">
             <td class="dataTableHeadingContent">&nbsp;<?php echo TABLE_HEADING_ID; ?>&nbsp;</td>
@@ -540,10 +557,11 @@
             <td class="dataTableHeadingContent">&nbsp;<?php echo TABLE_HEADING_OPT_VALUE; ?>&nbsp;</td>
             <td class="dataTableHeadingContent" align="right">&nbsp;<?php echo TABLE_HEADING_OPT_PRICE; ?>&nbsp;</td>
             <td class="dataTableHeadingContent" align="center">&nbsp;<?php echo TABLE_HEADING_OPT_PRICE_PREFIX; ?>&nbsp;</td>
+            <td class="dataTableHeadingContent" align="center">&nbsp;<?php echo TABLE_HEADING_OPT_SORT_ORDER; ?>&nbsp;</td>
             <td class="dataTableHeadingContent" align="center">&nbsp;<?php echo TABLE_HEADING_ACTION; ?>&nbsp;</td>
           </tr>
           <tr>
-            <td colspan="7"><?php echo tep_black_line(); ?></td>
+            <td colspan="8"><?php echo tep_black_line(); ?></td>
           </tr>
 <?php
   $next_id = 1;
@@ -597,6 +615,7 @@
             </select>&nbsp;</td>
             <td align="right" class="smallText">&nbsp;<input type="text" name="value_price" value="<?php echo $attributes_values['options_values_price']; ?>" size="6">&nbsp;</td>
             <td align="center" class="smallText">&nbsp;<input type="text" name="price_prefix" value="<?php echo $attributes_values['price_prefix']; ?>" size="2">&nbsp;</td>
+            <td align="center" class="smallText">&nbsp;<input type="text" name="sort_order" value="<?php echo $attributes_values['sort_order']; ?>" size="5">&nbsp;</td>
             <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_SAVE, 'disk', null, 'primary') . tep_draw_button(IMAGE_CANCEL, 'close', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info)); ?>&nbsp;</td>
 <?php
       if (DOWNLOAD_ENABLED == 'true') {
@@ -640,6 +659,7 @@
             <td class="smallText">&nbsp;<strong><?php echo $values_name; ?></strong>&nbsp;</td>
             <td align="right" class="smallText">&nbsp;<strong><?php echo $attributes_values["options_values_price"]; ?></strong>&nbsp;</td>
             <td align="center" class="smallText">&nbsp;<strong><?php echo $attributes_values["price_prefix"]; ?></strong>&nbsp;</td>
+            <td align="center" class="smallText">&nbsp;<strong><?php echo $attributes_values["sort_order"]; ?></strong>&nbsp;</td>
             <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_DELETE, 'trash', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_attribute&attribute_id=' . $HTTP_GET_VARS['attribute_id'] . '&' . $page_info), 'primary') . tep_draw_button(IMAGE_CANCEL, 'close', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info)); ?>&nbsp;</td>
 <?php
     } else {
@@ -650,6 +670,7 @@
             <td class="smallText">&nbsp;<?php echo $values_name; ?>&nbsp;</td>
             <td align="right" class="smallText">&nbsp;<?php echo $attributes_values["options_values_price"]; ?>&nbsp;</td>
             <td align="center" class="smallText">&nbsp;<?php echo $attributes_values["price_prefix"]; ?>&nbsp;</td>
+            <td align="center" class="smallText">&nbsp;<?php echo $attributes_values["sort_order"]; ?>&nbsp;</td>
             <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_EDIT, 'document', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=update_attribute&attribute_id=' . $attributes_values['products_attributes_id'] . '&' . $page_info)) . tep_draw_button(IMAGE_DELETE, 'trash', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_product_attribute&attribute_id=' . $attributes_values['products_attributes_id'] . '&' . $page_info)); ?>&nbsp;</td>
 <?php
     }
@@ -663,7 +684,7 @@
   if ($action != 'update_attribute') {
 ?>
           <tr>
-            <td colspan="7"><?php echo tep_black_line(); ?></td>
+            <td colspan="8"><?php echo tep_black_line(); ?></td>
           </tr>
           <tr class="<?php echo (floor($rows/2) == ($rows/2) ? 'attributes-even' : 'attributes-odd'); ?>">
             <td class="smallText">&nbsp;<?php echo $next_id; ?>&nbsp;</td>
@@ -693,6 +714,7 @@
             </select>&nbsp;</td>
             <td align="right" class="smallText">&nbsp;<input type="text" name="value_price" size="6">&nbsp;</td>
             <td align="right" class="smallText">&nbsp;<input type="text" name="price_prefix" size="2" value="+">&nbsp;</td>
+            <td align="right" class="smallText">&nbsp;<input type="text" name="sort_order" size="5" value="">&nbsp;</td>
             <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_INSERT, 'plus'); ?>&nbsp;</td>
           </tr>
 <?php
@@ -724,7 +746,7 @@
   }
 ?>
           <tr>
-            <td colspan="7"><?php echo tep_black_line(); ?></td>
+            <td colspan="8"><?php echo tep_black_line(); ?></td>
           </tr>
         </table></form></td>
       </tr>
